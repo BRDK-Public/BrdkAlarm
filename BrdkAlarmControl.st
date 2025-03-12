@@ -15,8 +15,8 @@ FUNCTION_BLOCK BrdkAlarmControl
 			internal.alarmCfgName := Name;
 		END_IF
 		
-		
 		Active := TRUE;
+		
 	ELSIF Enable AND Active THEN
 		// Cyclic
 		CASE state OF
