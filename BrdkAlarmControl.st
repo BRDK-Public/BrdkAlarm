@@ -4,18 +4,16 @@ FUNCTION_BLOCK BrdkAlarmControl
 
 	IF Enable AND NOT Active THEN
 		// Initializing
+		internal.MpComConfigBasic_0.Enable := TRUE;
+		internal.MpComConfigBasic_0.MpLink := ADR(MpLinkList);
+		internal.MpComConfigBasic_0.DataType := mpALARMX_CFG_ALARM;
 		
-		IF Configuration.NewAlarmConfig.Name <> '' THEN
-			internal.alarmCfgName := Configuration.NewAlarmConfig.Name;
-			internal.MpComConfigBasic_0.MpLink := Configuration.MpLinkList;
-		
-			internal.MpComConfigBasic_0.Data := ADR(Configuration.NewAlarmConfig);
-			internal.MpComConfigBasic_0.DataType := mpALARMX_CFG_ALARM;
-		ELSE
-			internal.alarmCfgName := Name;
+		IF internal.MpComConfigBasic_0.Error THEN
+			state := 999;	
+		ELSIF internal.MpComConfigBasic_0.Active THEN
+			Active := TRUE;
 		END_IF
 		
-		Active := TRUE;
 		
 	ELSIF Enable AND Active THEN
 		// Cyclic
@@ -23,25 +21,22 @@ FUNCTION_BLOCK BrdkAlarmControl
 			0:	
 				// If there is a new alarm configuration name, then a new alarm is configured at runtime
 				// Else we assume it is already configured and ready to control
-				IF Configuration.NewAlarmConfig.Name <> '' THEN
-
-					internal.MpComConfigBasic_0.Enable := TRUE;
-		
-					IF internal.MpComConfigBasic_0.Error THEN
-						state := 999;	
-					ELSIF internal.MpComConfigBasic_0.Active THEN
-						state := 10;
-					END_IF
-					
+				
+				Error := FALSE;
+				
+				IF AlarmConfig.Name <> '' THEN
+					internal.alarmCfgName := AlarmConfig.Name;
+					state := 10;
 				ELSE
+					internal.alarmCfgName := Name;
 					state := 20;
 				END_IF
 
 			10:
 				// Saving alarm config
-				
 				internal.MpComConfigBasic_0.CmdWrite := TRUE;
 				internal.MpComConfigBasic_0.WriteMode := mpCOM_CONFIG_WRITE_APPEND; 
+				internal.MpComConfigBasic_0.Data := ADR(AlarmConfig);
 				
 				IF internal.MpComConfigBasic_0.CommandDone THEN
 					internal.MpComConfigBasic_0.CmdWrite := FALSE;
@@ -53,8 +48,25 @@ FUNCTION_BLOCK BrdkAlarmControl
 				
 					state := 999;
 				END_IF
-			
+				
 			20:
+				// Reading the actual alarm config for the Info output
+				internal.MpComConfigBasic_0.CmdRead := TRUE;
+				internal.MpComConfigBasic_0.Path := ADR(internal.alarmCfgName);
+				internal.MpComConfigBasic_0.Data := ADR(Info);
+				
+				IF internal.MpComConfigBasic_0.CommandDone THEN
+					internal.MpComConfigBasic_0.CmdRead := FALSE;
+					state := 100;
+				ELSIF internal.MpComConfigBasic_0.Error THEN
+					internal.MpComConfigBasic_0.CmdRead := FALSE;
+
+					Error := TRUE;
+				
+					state := 999;
+				END_IF
+			
+			100:
 				// Evaluate delay and inhibit			
 				IF Delay > 0 THEN
 					internal.TON_delay.IN := Condition;
@@ -84,8 +96,10 @@ FUNCTION_BLOCK BrdkAlarmControl
 				
 			999:
 				// Error state
+				Error := TRUE;
 				internal.MpComConfigBasic_0.ErrorReset := ErrorReset;
 				internal.MpComConfigBasic_0.CmdWrite := FALSE;
+				internal.MpComConfigBasic_0.CmdRead := FALSE;
 		
 				IF NOT internal.MpComConfigBasic_0.Error THEN
 					internal.MpComConfigBasic_0.ErrorReset := FALSE;
@@ -100,10 +114,6 @@ FUNCTION_BLOCK BrdkAlarmControl
 		InstanceID := internal.instanceID;
 		StatusID := internal.MpComConfigBasic_0.StatusID;
 		
-		// Function block calls
-		internal.MpComConfigBasic_0();
-		internal.TON_delay(PT := Delay);
-		
 	ELSIF NOT Enable AND Active THEN
 		// Exiting
 		
@@ -115,6 +125,7 @@ FUNCTION_BLOCK BrdkAlarmControl
 		// Reset internal variables
 		internal.TON_delay.IN := FALSE;
 		internal.MpComConfigBasic_0.CmdWrite := FALSE;
+		internal.MpComConfigBasic_0.CmdRead := FALSE;
 		internal.MpComConfigBasic_0.Enable := FALSE;
 		internal.instanceID := 0;
 		internal.alarmActive := FALSE;
@@ -123,6 +134,7 @@ FUNCTION_BLOCK BrdkAlarmControl
 		
 		// Reset outputs
 		Active := FALSE;
+		Error := FALSE;
 		AlarmActive := FALSE;
 		InstanceID := 0;
 		Error := 0;
@@ -133,5 +145,9 @@ FUNCTION_BLOCK BrdkAlarmControl
 		internal.confirmOld := Confirm;
 
 	END_IF
+	
+	// Function block calls
+	internal.MpComConfigBasic_0();
+	internal.TON_delay(PT := Delay);
 
 END_FUNCTION_BLOCK
