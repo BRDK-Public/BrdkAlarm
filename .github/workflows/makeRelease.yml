@@ -7,10 +7,13 @@ on:
 
 jobs:
   call-remote:
-    uses: BRDK-GitHub/BrdkLibrariesProject/.github/workflows/release_one_subtree.yml@main
+    permissions:
+      contents: write
+    uses: BRDK-Public/BrdkLibrariesProject/.github/workflows/release_one_subtree.yml@main
     with:
-      artifact_owner: "BRDK-GitHub"
+      artifact_owner: "BRDK-Public"
       artifact_repo: "BrdkLibrariesProject"
-      artifact_workflow_ref: ".github/workflows/build_BrdkAlarm.yml"   # <-- EDIT
+      artifact_workflow_ref: ".github/workflows/build_BrdkAlarm.yml"
+      library_name: "BrdkAlarm"
     secrets:
       github-pat-token: ${{ secrets.SERVICE_PAT }}

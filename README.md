@@ -1,2 +1,2 @@
-# This is the BrdkAlarm library
-It is maintained from the BrdkLibraryProject
+# BrdkAlarm
+Open index.html in help folder for full documentation.
