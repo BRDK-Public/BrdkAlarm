@@ -1081,6 +1081,47 @@
 <p>Library for creating and controling MpAlarmX alarms</p>
 <h1 id="brdkalarm">BrdkAlarm</h1>
 <p>Open index.html in help folder for full documentation.</p>
+<p>BrdkAlarm is an IEC 61131-3 library that simplifies alarm management on top of B&amp;R's MpAlarmX framework.</p>
+<h2 id="overview">Overview</h2>
+<p>The library provides the <code>BrdkAlarmControl</code> function block, which handles:</p>
+<ul>
+<li><strong>Runtime alarm configuration</strong> — optionally writes a new alarm config to the MpAlarmX list at startup via <code>MpComConfigBasic</code>.</li>
+<li><strong>Alarm control</strong> — sets and resets alarms through <code>MpAlarmXSet</code> / <code>MpAlarmXResetID</code> based on a boolean <code>Condition</code> input.</li>
+<li><strong>Delay &amp; inhibit</strong> — supports a configurable delay (<code>TON</code>) before triggering and an <code>Inhibit</code> input to suppress the alarm.</li>
+<li><strong>Acknowledge &amp; confirm</strong> — rising-edge detection on <code>Acknowledge</code> and <code>Confirm</code> inputs to call <code>MpAlarmXAcknowledgeID</code> / <code>MpAlarmXConfirmID</code>.</li>
+<li><strong>Error handling</strong> — surfaces errors from <code>MpComConfigBasic</code> and provides an <code>ErrorReset</code> input to recover.</li>
+</ul>
+<h2 id="usage">Usage</h2>
+<ol>
+<li>Create an instance of <code>BrdkAlarmControl</code>.</li>
+<li>Connect <code>MpLinkCore</code> (MpAlarmX Core) and <code>MpLinkList</code> (MpAlarmX List) references.</li>
+<li>Either populate <code>AlarmConfig</code> (including its <code>.Name</code> field) to configure a new alarm at runtime, <strong>or</strong> set the <code>Name</code> input to reference an existing alarm configuration.</li>
+<li>Set <code>Enable</code> to <code>TRUE</code>. The FB initialises its internal <code>MpComConfigBasic</code>, writes the config if needed, reads it back into the <code>Info</code> output, and then enters cyclic alarm monitoring.</li>
+</ol>
+<h3 id="integration-with-brdkpackml">Integration with BrdkPackML</h3>
+<p><code>BrdkAlarmControl</code> pairs well with <code>BrdkPackML</code> to drive PackML reactions (abort, stop, warning) based on alarm severity. Use an array of <code>BrdkAlarmControl</code> instances and loop over them to evaluate the appropriate control command:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>// Check for alarm reaction
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>FOR i := 0 TO SIZEOF(BrdkAlarmControl_) / SIZEOF(BrdkAlarmControl_[0]) -1 DO
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    IF BrdkAlarmControl_[i].Active THEN
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        CASE BrdkAlarmControl_[i].Info.Severity OF
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>            1: // ABORT
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                em.Command.Abort := TRUE;
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>            2: // STOP
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                em.Command.Stop := TRUE;
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>            3: // WARNING / INFO
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                // All others don&#39;t trigger a PackML state change
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        END_CASE
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    END_IF
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>END_FOR
+</span></code></pre></div>
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+<li><code>MpAlarmX</code></li>
+<li><code>MpCom</code></li>
+<li><code>standard</code> (TON)</li>
+</ul>
+<h2 id="version">Version</h2>
+<p>See <a href="CHANGELOG.md">CHANGELOG.md</a> for release history.</p>
 <hr />
 <h2 id="social-links"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .75.75 0 0 1 .018-1.042.75.75 0 0 1 1.042-.018 2 2 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.75.75 0 0 1-1.042-.018.75.75 0 0 1-.018-1.042m-4.69 9.64a2 2 0 0 0 2.83 0l1.25-1.25a.75.75 0 0 1 1.042.018.75.75 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .75.75 0 0 1-.018 1.042.75.75 0 0 1-1.042.018 2 2 0 0 0-2.83 0l-2.5 2.5a2 2 0 0 0 0 2.83"/></svg></span> <img alt="🛠" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@16.0.1/assets/svg/1f6e0.svg" title=":tools:" /> Social &amp; Links</h2>
 <p><a href="https://help.br-automation.com/#/en/6" target="_blank" class="md-button">

@@ -139,13 +139,13 @@ FUNCTION_BLOCK BrdkAlarmControl
 		InstanceID := 0;
 		Error := 0;
 		StatusID := 0;
-		
-		// Update old variables
-		internal.acknowledgeOld := Acknowledge;
-		internal.confirmOld := Confirm;
 
 	END_IF
-	
+
+	// Update old variables
+	internal.acknowledgeOld := Acknowledge;
+	internal.confirmOld := Confirm;	
+
 	// Function block calls
 	internal.MpComConfigBasic_0();
 	internal.TON_delay(PT := Delay);

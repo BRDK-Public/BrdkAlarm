@@ -1177,7 +1177,7 @@
 
 
 <h1 id="brdkalarmcontrol">BrdkAlarmControl</h1>
-<p>Function block for adding an alarm configuration and controlling the alarm</p>
+<p>Function block for optionally adding an alarm configuration and controlling the alarm</p>
 <h2 id="type">Type</h2>
 <p><strong>Function Block</strong></p>
 <h2 id="function-diagram">Function Diagram</h2>
@@ -1264,7 +1264,6 @@
         <table class="fubOut">
           <tr><td class="fubElementRight" align="right">Active</td></tr>
           <tr><td class="fubElementRight" align="right">AlarmActive</td></tr>
-          <tr><td class="fubElementRight" align="right">AlarmState</td></tr>
           <tr><td class="fubElementRight" align="right">InstanceID</td></tr>
           <tr><td class="fubElementRight" align="right">StatusID</td></tr>
           <tr><td class="fubElementRight" align="right">Info</td></tr>
@@ -1276,7 +1275,6 @@
       <table class="fubData">
         <tr><td width="10"><hr></td><td class="fubElementLeft">BOOL</td></tr>
         <tr><td width="10"><hr></td><td class="fubElementLeft">BOOL</td></tr>
-        <tr><td width="10"><hr></td><td class="fubElementLeft">MpAlarmXStateEnum</td></tr>
         <tr><td width="10"><hr></td><td class="fubElementLeft">UDINT</td></tr>
         <tr><td width="10"><hr></td><td class="fubElementLeft">DINT</td></tr>
         <tr><td width="10"><hr></td><td class="fubElementLeft">MpAlarmXCfgListAlarmType</td></tr>
@@ -1333,7 +1331,7 @@
 <td><code>Enable</code></td>
 <td>BOOL</td>
 <td>&nbsp;</td>
-<td>Enables the Function Block</td>
+<td>Enable the function block</td>
 </tr>
 <tr>
 <td>IN</td>
@@ -1347,7 +1345,7 @@
 <td><code>MpLinkList</code></td>
 <td>&amp;MpComIdentType (pointer)</td>
 <td>&nbsp;</td>
-<td>MpLink of the MpAlarmX Core configuration</td>
+<td>MpLink of the MpAlarmX List configuration</td>
 </tr>
 <tr>
 <td>IN</td>
@@ -1361,7 +1359,7 @@
 <td><code>Name</code></td>
 <td>STRING[255]</td>
 <td>&nbsp;</td>
-<td>Name of an existing alarm configuration</td>
+<td>Name of an existing alarm configuration. Leave empty to configure an alarm at runtime using AlarmConfig input</td>
 </tr>
 <tr>
 <td>IN</td>
@@ -1375,7 +1373,7 @@
 <td><code>Delay</code></td>
 <td>TIME</td>
 <td>&nbsp;</td>
-<td>Alarm Delay. The alarm will be triggered after the delay if the AlarmActive is TRUE and AlarmInhibit is FALSE</td>
+<td>Alarm Delay. The alarm will be triggered after the delay if Condition is TRUE and Inhibit is FALSE</td>
 </tr>
 <tr>
 <td>IN</td>
@@ -1396,35 +1394,28 @@
 <td><code>Confirm</code></td>
 <td>BOOL</td>
 <td>&nbsp;</td>
-<td>Confirming the alarm</td>
+<td>Confirm the alarm</td>
 </tr>
 <tr>
 <td>IN</td>
 <td><code>ErrorReset</code></td>
 <td>BOOL</td>
 <td>&nbsp;</td>
-<td>Resets errors on the MpAlarmXConfigAlarm if it fails to save a new alarm config</td>
+<td>Resets error(s) on the MpComConfigBasic if it fails to read or save alarm config</td>
 </tr>
 <tr>
 <td>OUT</td>
 <td><code>Active</code></td>
 <td>BOOL</td>
 <td>&nbsp;</td>
-<td>Active when Function Block is enabled</td>
+<td>Active when the function block is enabled</td>
 </tr>
 <tr>
 <td>OUT</td>
 <td><code>AlarmActive</code></td>
 <td>BOOL</td>
 <td>&nbsp;</td>
-<td>True if alarm has been set and False if alarm has been reset</td>
-</tr>
-<tr>
-<td>OUT</td>
-<td><code>AlarmState</code></td>
-<td>MpAlarmXStateEnum</td>
-<td>&nbsp;</td>
-<td>The state of the alarm</td>
+<td>TRUE if alarm has been set and FALSE if alarm has been reset</td>
 </tr>
 <tr>
 <td>OUT</td>
@@ -1438,7 +1429,7 @@
 <td><code>StatusID</code></td>
 <td>DINT</td>
 <td>&nbsp;</td>
-<td>ID of the status from MpAlarmXConfigAlarm</td>
+<td>ID of the status from MpComConfigBasic</td>
 </tr>
 <tr>
 <td>OUT</td>
