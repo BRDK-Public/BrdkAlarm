@@ -6,7 +6,9 @@ TYPE
 		TON_delay : TON; (*AlarmDelay timer*)
 		alarmActive : BOOL; (*Internal state of the alarm when taking delay and inhibit into account*)
 		alarmCfgName : STRING[255]; (*Internal name of the alarm config*)
+		alarmInstanceName : STRING[255]; (*Internal name of the alarm instance*)
 		acknowledgeOld : BOOL; (*Edge detection*)
 		confirmOld : BOOL; (*Edge detection*)
+		errorResetOld : BOOL; (*Edge detection*)
 	END_STRUCT;
 END_TYPE

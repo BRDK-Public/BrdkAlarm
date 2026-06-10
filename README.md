@@ -18,6 +18,7 @@ The library provides the `BrdkAlarmControl` function block, which handles:
 1. Create an instance of `BrdkAlarmControl`.
 2. Connect `MpLinkCore` (MpAlarmX Core) and `MpLinkList` (MpAlarmX List) references.
 3. Either populate `AlarmConfig` (including its `.Name` field) to configure a new alarm at runtime, **or** set the `Name` input to reference an existing alarm configuration.
+   - If the alarm configuration name differs from the instance name (e.g. when using token-based names such as `{1}` in indexed PackML modules), set `NameInConfig` to the configuration name and `Name` to the instance name.
 4. Set `Enable` to `TRUE`. The FB initialises its internal `MpComConfigBasic`, writes the config if needed, reads it back into the `Info` output, and then enters cyclic alarm monitoring.
 
 ### Integration with BrdkPackML
