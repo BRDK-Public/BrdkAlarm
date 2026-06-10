@@ -1,5 +1,5 @@
 # BrdkAlarm
-Open index.html in help folder for full documentation.
+Full documentation is published at https://psychic-adventure-p36yvy9.pages.github.io/.
 
 BrdkAlarm is an IEC 61131-3 library that simplifies alarm management on top of B&R's MpAlarmX framework.
 
