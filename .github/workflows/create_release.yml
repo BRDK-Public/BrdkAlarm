@@ -1,0 +1,362 @@
+name: Create release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+env:
+  ARTIFACT_OWNER: BRDK-Public
+  ARTIFACT_REPO: BrdkLibrariesProject
+  LIBRARY_NAME: ${{ github.event.repository.name }}
+  ARTIFACT_WORKFLOW_REF: ${{ format('.github/workflows/build_{0}.yml', github.event.repository.name) }}
+
+jobs:
+  tag_finder:
+    if: github.repository != 'BRDK-Public/BrdkLibrariesProject'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.extract.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Find Tag by read line from changelog
+        id: extract
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            CHANGELOG_FILE="CHANGELOG.md"
+          elif [ -f CHANGELOG ]; then
+            CHANGELOG_FILE="CHANGELOG"
+          else
+            echo "::error::CHANGELOG.md or CHANGELOG not found"
+            exit 1
+          fi
+          tag=$(awk '
+            /^## \[/ {
+              version=$0
+              sub(/^## \[/, "", version)
+              sub(/\].*$/, "", version)
+              if (tolower(version) != "unreleased") {
+                print version
+                exit
+              }
+            }
+          ' "$CHANGELOG_FILE")
+          if [ -z "$tag" ]; then
+            echo "::error::No released changelog section found"
+            exit 1
+          fi
+          echo "Found line: $tag"
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          
+  download_artifact_n_make_release:
+    runs-on: ubuntu-latest
+    needs: tag_finder
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        
+      - name: Use version from previous job
+        run: |
+          echo "Version from previous job: ${{ needs.tag_finder.outputs.tag }}"
+
+      - name: Find and download matching artifacts
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.SERVICE_PAT }}   # fine-grained or classic PAT
+          script: |
+            const owner = process.env.ARTIFACT_OWNER;
+            const repo  = process.env.ARTIFACT_REPO;
+            const workflowRef = process.env.ARTIFACT_WORKFLOW_REF;
+            const library = process.env.LIBRARY_NAME;
+            const version = "${{ needs.tag_finder.outputs.tag }}";
+            const tag = `v${version}`;
+            const wanted = [
+              { name: `${library}_samples-${tag}`, wrapper: '_samples_artifact_wrapper.zip', required: false },
+              { name: `${library}_help-${tag}`, wrapper: '_help_artifact_wrapper.zip', required: true },
+              { name: `${library}_help-site-${tag}`, wrapper: '_help_site_artifact_wrapper.zip', required: true },
+            ];
+            
+            const { data: wf } = await github.rest.actions.getWorkflow({ owner, repo, workflow_id: workflowRef });
+            const wfId = wf.id;
+
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner, repo, workflow_id: wfId, per_page: 100
+            });
+
+            // ---------- Print all found artifacts on main -----------
+            const allArtifacts = [];
+            for (const run of runs) {
+              if (run.head_branch !== "main" || run.conclusion !== "success") continue;
+            
+              const arts = await github.paginate(
+                github.rest.actions.listWorkflowRunArtifacts,
+                { owner, repo, run_id: run.id, per_page: 100 }
+              );
+              for (const a of arts) {
+                allArtifacts.push({
+                  created_at: run.created_at,
+                  id: a.id,
+                  branch: run.head_branch,
+                  run_number: run.run_number,
+                  name: a.name
+                });
+              }
+            }
+            
+            if (allArtifacts.length === 0) {
+              core.info('No artifacts found on main branch runs.');
+            } else {
+              core.info('Artifacts found on main branch runs:\n' +
+                allArtifacts.map(a =>
+                  `- run #${a.run_number} | ${a.created_at} | id=${a.id} | branch=${a.branch} | name="${a.name}"`
+                ).join('\n')
+              );
+            }
+            // ---------------------------------------------------------
+
+            let match = null;
+            for (const run of runs) {
+              if (run.head_branch !== "main" || run.conclusion !== "success") continue;
+              
+              const arts = await github.paginate(
+                github.rest.actions.listWorkflowRunArtifacts,
+                { owner, repo, run_id: run.id, per_page: 100 }
+              );
+              const byName = new Map(arts.map(a => [a.name, a]));
+              const missingRequired = wanted.filter(a => a.required && !byName.has(a.name));
+              if (missingRequired.length > 0) continue;
+
+              match = {
+                run,
+                artifacts: wanted
+                  .filter(a => byName.has(a.name))
+                  .map(a => ({ ...a, artifact: byName.get(a.name) }))
+              };
+              break;
+            }
+
+            if (!match) {
+              core.setFailed(`No successful main run found with required artifacts for ${library} ${tag}.`);
+              return;
+            }
+
+            const fs = require("fs");
+            const path = require("path");
+            for (const item of match.artifacts) {
+              core.info(`Downloading artifact "${item.name}" from run #${match.run.run_number}`);
+              const { data } = await github.rest.actions.downloadArtifact({
+                owner,
+                repo,
+                artifact_id: item.artifact.id,
+                archive_format: "zip",
+              });
+              const tmpPath = path.join(process.env.GITHUB_WORKSPACE, item.wrapper);
+              fs.writeFileSync(tmpPath, Buffer.from(data));
+              core.info(`Downloaded artifact wrapper to ${tmpPath}`);
+            }
+
+      - name: Extract downloaded artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIB="$LIBRARY_NAME"
+          VERSION="${{ needs.tag_finder.outputs.tag }}"
+          TAG="v${VERSION}"
+
+          mkdir -p "$GITHUB_WORKSPACE/_help_site"
+          unzip -o "$GITHUB_WORKSPACE/_help_site_artifact_wrapper.zip" -d "$GITHUB_WORKSPACE/_help_site"
+          rm -f "$GITHUB_WORKSPACE/_help_site_artifact_wrapper.zip"
+          if [ ! -f "$GITHUB_WORKSPACE/_help_site/index.html" ]; then
+            echo "::error::index.html not found in help-site artifact"
+            exit 1
+          fi
+
+          unzip -o "$GITHUB_WORKSPACE/_help_artifact_wrapper.zip" -d "$GITHUB_WORKSPACE/"
+          rm -f "$GITHUB_WORKSPACE/_help_artifact_wrapper.zip"
+          if [ ! -f "$GITHUB_WORKSPACE/${LIB}_help_${TAG}.zip" ]; then
+            echo "::error::${LIB}_help_${TAG}.zip not found after extracting artifact"
+            exit 1
+          fi
+
+          if [ -f "$GITHUB_WORKSPACE/_samples_artifact_wrapper.zip" ]; then
+            unzip -o "$GITHUB_WORKSPACE/_samples_artifact_wrapper.zip" -d "$GITHUB_WORKSPACE/"
+            rm -f "$GITHUB_WORKSPACE/_samples_artifact_wrapper.zip"
+            if [ ! -f "$GITHUB_WORKSPACE/samples.zip" ]; then
+              echo "::error::samples.zip not found after extracting artifact"
+              exit 1
+            fi
+            mv "$GITHUB_WORKSPACE/samples.zip" "$GITHUB_WORKSPACE/${LIB}_samples_${TAG}.zip"
+            echo "Extracted and renamed to ${LIB}_samples_${TAG}.zip"
+          else
+            echo "No samples artifact found for ${LIB} ${TAG}; release will be created without a samples zip."
+          fi
+
+      - name: Collect release assets
+        id: release_assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIB="$LIBRARY_NAME"
+          VERSION="${{ needs.tag_finder.outputs.tag }}"
+          ASSET_LIST="$GITHUB_WORKSPACE/release-assets.txt"
+
+          printf '%s\n' \
+            "${LIB}_v${VERSION}.zip" \
+            "${LIB}_help_v${VERSION}.zip" > "$ASSET_LIST"
+
+          if [ -f "${LIB}_samples_v${VERSION}.zip" ]; then
+            printf '%s\n' "${LIB}_samples_v${VERSION}.zip" >> "$ASSET_LIST"
+          fi
+
+          {
+            echo 'files<<EOF'
+            cat "$ASSET_LIST"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish help site to Pages branch
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PAGES_DIR="$(mktemp -d)"
+          REMOTE_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git clone --depth 1 --branch gh-pages "$REMOTE_URL" "$PAGES_DIR"
+          else
+            git init "$PAGES_DIR"
+            git -C "$PAGES_DIR" remote add origin "$REMOTE_URL"
+            git -C "$PAGES_DIR" checkout --orphan gh-pages
+          fi
+
+          find "$PAGES_DIR" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          rsync -a "$GITHUB_WORKSPACE/_help_site"/ "$PAGES_DIR"/
+          touch "$PAGES_DIR/.nojekyll"
+
+          git -C "$PAGES_DIR" config user.name "github-actions[bot]"
+          git -C "$PAGES_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$PAGES_DIR" add .
+          if git -C "$PAGES_DIR" diff --cached --quiet; then
+            echo "No Pages changes to publish."
+          else
+            git -C "$PAGES_DIR" commit -m "update(docs): publish ${LIBRARY_NAME} help"
+            git -C "$PAGES_DIR" push origin gh-pages
+          fi
+
+      # If tag exists but release was deleted, remove stale tag so it gets recreated on the new commit
+      - name: Delete stale tag if release is missing
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const tag = "v${{ needs.tag_finder.outputs.tag }}";
+            // Check if tag exists
+            let tagExists = false;
+            try {
+              await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tag}`
+              });
+              tagExists = true;
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+            if (!tagExists) {
+              core.info(`Tag ${tag} does not exist yet — nothing to clean up.`);
+              return;
+            }
+            // Check if a release exists for this tag
+            let releaseExists = false;
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag
+              });
+              releaseExists = true;
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+            if (releaseExists) {
+              core.setFailed(`Release for ${tag} already exists. If you are sure it won't break anything, delete the release (and tag) manually before re-running.`);
+              return;
+            }
+            // Tag exists but release is gone — delete the stale tag
+            core.info(`Tag ${tag} exists but release is missing — deleting stale tag.`);
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/${tag}`
+            });
+            core.info(`Deleted tag ${tag}.`);
+
+      # make body part for release.
+      - name: Extract latest changelog section
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            FILE="CHANGELOG.md"
+          else
+            FILE="CHANGELOG"
+          fi
+      
+          # Extract the first released section until the next "## " or EOF
+          awk '
+            /^## \[/ {
+              if (p) exit
+              version=$0
+              sub(/^## \[/, "", version)
+              sub(/\].*$/, "", version)
+              if (tolower(version) == "unreleased") next
+              p=1
+            }
+            p
+          ' "$FILE" > tmpBody.md
+
+          if [ ! -s tmpBody.md ]; then
+            echo "::error::No released changelog section found"
+            exit 1
+          fi
+      
+          # Trim leading blank lines
+          awk 'NF{p=1} p' tmpBody.md > notes_clean.md && mv notes_clean.md tmpBody.md
+      
+      # Create source archive with library name as root folder (no version suffix) for better import in Automation Studio
+      - name: Create source archive
+        shell: bash
+        run: |
+          LIB="$LIBRARY_NAME"
+          TAG="${{ needs.tag_finder.outputs.tag }}"
+          # Create a temp directory with the library name, copy repo contents (excluding git things and samples)
+          mkdir -p "/tmp/${LIB}"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.gitignore' \
+            --exclude='help' \
+            --exclude='_help_site' \
+            --exclude='release-assets.txt' \
+            --exclude='tmpBody.md' \
+            --exclude='*_artifact_wrapper.zip' \
+            --exclude='*_samples_v*.zip' \
+            --exclude='*_help_v*.zip' \
+            ./ "/tmp/${LIB}/"
+          # Create zip with the library-named folder as root, version in filename only
+          (cd /tmp && zip -r "$GITHUB_WORKSPACE/${LIB}_v${TAG}.zip" "${LIB}")
+
+      # make release — tag points directly to main branch HEAD
+      - name: Make release on this repo
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.tag_finder.outputs.tag }}                          # the release/tag id
+          target_commitish: main                                                  # tag the main branch commit
+          name: "${{ env.LIBRARY_NAME }} v${{ needs.tag_finder.outputs.tag }}"    # release title
+          body_path: tmpBody.md                 # use cut part from CHANGOLOG contents
+          files: |
+            ${{ steps.release_assets.outputs.files }}
