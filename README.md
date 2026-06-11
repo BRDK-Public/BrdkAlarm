@@ -1,5 +1,6 @@
-# BrdkAlarm
-Full documentation is published at https://psychic-adventure-p36yvy9.pages.github.io/.
+Full documentation is published at [https://brdk-public.github.io/BrdkAlarm](https://brdk-public.github.io/BrdkAlarm)
+
+Repository and releases are located at [https://github.com/BRDK-Public/Brdkalarm](https://github.com/BRDK-Public/Brdkalarm)
 
 BrdkAlarm is an IEC 61131-3 library that simplifies alarm management on top of B&R's MpAlarmX framework.
 
@@ -46,7 +47,3 @@ END_FOR
 - `MpAlarmX`
 - `MpCom`
 - `standard` (TON)
-
-## Version
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
