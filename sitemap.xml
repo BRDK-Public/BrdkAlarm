@@ -2,70 +2,70 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://sitename.example/index.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/Data%20Types%20and%20Constants/index.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/Data%20Types%20and%20Constants/constants_BrdkAlarm.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/Data%20Types%20and%20Constants/datatypes/index.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/Data%20Types%20and%20Constants/datatypes/BrdkAlarmControlInternalType.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/Function%20and%20Function%20Block/index.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/Function%20and%20Function%20Block/BrdkAlarmControl.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/info/build.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/info/changelog.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/info/dependencies.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/info/license.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/samples/index.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/samples/Program/index.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/samples/Program/Program/index.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/samples/Program/Program/Main.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/samples/Program/Program/Types_typ.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
     <url>
          <loc>https://sitename.example/samples/Program/Program/Variables_var.html</loc>
-         <lastmod>2026-06-10</lastmod>
+         <lastmod>2026-06-11</lastmod>
     </url>
 </urlset>
